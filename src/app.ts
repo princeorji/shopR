@@ -1,8 +1,33 @@
 import 'dotenv/config';
 import express, { NextFunction, Request, Response } from 'express';
+import userRoutes from './routes/user.routes';
+import session from 'express-session';
 import createHttpError, { isHttpError } from 'http-errors';
+import morgan from 'morgan';
+import env from './utils/validateEnv';
+import MongoStore from 'connect-mongo';
 
 const app = express();
+
+app.use(morgan('dev'));
+app.use(express.json());
+
+app.use(
+  session({
+    secret: env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      maxAge: 60 * 60 * 100, // 1 hour
+    },
+    rolling: true,
+    store: MongoStore.create({
+      mongoUrl: env.DATABASE,
+    }),
+  })
+);
+
+app.use('/api/users', userRoutes);
 
 app.use((req, res, next) => {
   next(createHttpError(404, 'Endpoint not found'));
