@@ -3,6 +3,7 @@ import express, { NextFunction, Request, Response } from 'express';
 import userRoutes from './routes/user.routes';
 import productRoutes from './routes/product.routes';
 import cartRoutes from './routes/cart.routes';
+import orderRoutes from './routes/order.routes';
 import session from 'express-session';
 import createHttpError, { isHttpError } from 'http-errors';
 import morgan from 'morgan';
@@ -33,6 +34,7 @@ app.use(
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/cart', isAuthenticated, cartRoutes);
+app.use('/api/orders', isAuthenticated, orderRoutes);
 
 app.use((req, res, next) => {
   next(createHttpError(404, 'Endpoint not found'));
