@@ -9,4 +9,8 @@ routes.get('', controller.cart);
 
 routes.delete('/:itemId', controller.removeCartItem);
 
+routes.post('/:cartId/checkout', controller.checkout);
+
+routes.post('/:cartId/order', controller.finalizeOrder);
+
 export default routes;

@@ -3,6 +3,16 @@ import Cart from '../models/cart';
 import CartItem from '../models/cartItem';
 import mongoose from 'mongoose';
 import createHttpError from 'http-errors';
+import Stripe from 'stripe';
+import env from '../utils/validateEnv';
+import Products from '../models/product';
+import Orders from '../models/order';
+import { OrderStatus } from '../enums/orderStatus';
+import OrderItem from '../models/orderItem';
+
+const stripe = new Stripe(env.STRIPE_SECRET, {
+  apiVersion: '2024-06-20',
+});
 
 interface CartBody {
   productId: string;
@@ -98,6 +108,116 @@ export const removeCartItem: RequestHandler = async (req, res, next) => {
     }
 
     res.status(200).json(item);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const checkout: RequestHandler = async (req, res, next) => {
+  const { cartId } = req.params;
+
+  try {
+    if (!mongoose.isValidObjectId(cartId)) {
+      throw createHttpError(400, 'Invalid cart id');
+    }
+
+    const items = await CartItem.find({ cartId });
+
+    if (items.length === 0) {
+      return res.status(200).json({ message: 'Your cart is empty' });
+    }
+
+    // Calculate total price
+    let total = 0;
+
+    for (const item of items) {
+      const product = await Products.findOne({ _id: item.productId });
+
+      if (product && product.price) {
+        total += product.price * item.quantity;
+      }
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: total * 100, // amount in kobo
+      currency: 'ngn',
+      payment_method_types: ['card'],
+    });
+
+    res.status(200).json({
+      paymentIntentId: paymentIntent.id,
+      client_secret: paymentIntent.client_secret,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+interface finalizeOrderParams {
+  cartId: string;
+}
+
+interface finalizeOrderBody {
+  paymentIntentId: string;
+}
+
+export const finalizeOrder: RequestHandler<
+  finalizeOrderParams,
+  unknown,
+  finalizeOrderBody,
+  unknown
+> = async (req, res, next) => {
+  const userId = req.session.userId;
+  const { paymentIntentId } = req.body;
+  const { cartId } = req.params;
+
+  try {
+    if (!mongoose.isValidObjectId(cartId)) {
+      throw createHttpError(400, 'Invalid cart id');
+    }
+
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    if (paymentIntent.status !== 'succeeded') {
+      throw createHttpError(400, 'Payment not successful');
+    }
+
+    const items = await CartItem.find({ cartId });
+
+    if (items.length === 0) {
+      return res.status(200).json({ message: 'Your cart is empty' });
+    }
+
+    let total = 0;
+
+    for (const item of items) {
+      const product = await Products.findById(item.productId);
+
+      if (product && product.price) {
+        total += product.price * item.quantity;
+      }
+    }
+
+    const order = await Orders.create({
+      userId,
+      total,
+      status: OrderStatus.PENDING,
+    });
+
+    for (const item of items) {
+      const product = await Products.findById(item.productId);
+
+      await OrderItem.create({
+        orderId: order._id,
+        productId: item.productId,
+        quantity: item.quantity,
+        itemPrice: product?.price,
+      });
+    }
+
+    // Clear cart items
+    await CartItem.deleteMany({ cartId });
+
+    res.status(200).json({ orderId: order._id });
   } catch (error) {
     next(error);
   }
