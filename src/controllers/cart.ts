@@ -66,17 +66,14 @@ export const cart: RequestHandler = async (req, res, next) => {
       throw createHttpError(404, 'Cart not found');
     }
 
-    const items = await CartItem.find({ cartId: cart._id }).populate(
-      'productId',
-      'name description price'
-    );
+    const items = await CartItem.find({ cartId: cart._id }).select('-cartId');
 
     if (items.length === 0) {
       return res.status(200).json({ message: 'Your cart is empty' });
     }
 
     res.status(200).json({
-      cart: cart._id,
+      cartId: cart._id,
       items,
     });
   } catch (error) {
