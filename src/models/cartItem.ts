@@ -9,7 +9,7 @@ const schema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'Product',
   },
-  quantity: { type: Number, required: true },
+  quantity: { type: Number, required: true, min: 1 },
 });
 
 type CartItem = InferSchemaType<typeof schema>;

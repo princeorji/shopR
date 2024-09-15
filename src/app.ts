@@ -2,11 +2,13 @@ import 'dotenv/config';
 import express, { NextFunction, Request, Response } from 'express';
 import userRoutes from './routes/user.routes';
 import productRoutes from './routes/product.routes';
+import cartRoutes from './routes/cart.routes';
 import session from 'express-session';
 import createHttpError, { isHttpError } from 'http-errors';
 import morgan from 'morgan';
 import env from './utils/validateEnv';
 import MongoStore from 'connect-mongo';
+import { isAuthenticated } from './middlewares/auth';
 
 const app = express();
 
@@ -30,6 +32,7 @@ app.use(
 
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/cart', isAuthenticated, cartRoutes);
 
 app.use((req, res, next) => {
   next(createHttpError(404, 'Endpoint not found'));
