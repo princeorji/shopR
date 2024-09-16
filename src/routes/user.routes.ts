@@ -1,14 +1,20 @@
 import express from 'express';
 import * as controller from '../controllers/user';
 import { isAuthenticated } from '../middlewares/auth';
+import { authLimiter, globalLimiter } from '../middlewares/rate-limit';
 
 const routes = express.Router();
 
-routes.get('/', isAuthenticated, controller.getAuthenticatedUser);
+routes.get(
+  '/',
+  globalLimiter,
+  isAuthenticated,
+  controller.getAuthenticatedUser
+);
 
-routes.post('/signup', controller.signup);
+routes.post('/signup', authLimiter, controller.signup);
 
-routes.post('/login', controller.login);
+routes.post('/login', authLimiter, controller.login);
 
 routes.get('/logout', controller.logout);
 

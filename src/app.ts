@@ -10,6 +10,11 @@ import morgan from 'morgan';
 import env from './utils/validateEnv';
 import MongoStore from 'connect-mongo';
 import { isAuthenticated } from './middlewares/auth';
+import {
+  cartLimiter,
+  orderLimiter,
+  productLimiter,
+} from './middlewares/rate-limit';
 
 const app = express();
 
@@ -32,9 +37,9 @@ app.use(
 );
 
 app.use('/api/users', userRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/cart', isAuthenticated, cartRoutes);
-app.use('/api/orders', isAuthenticated, orderRoutes);
+app.use('/api/products', productLimiter, productRoutes);
+app.use('/api/cart', cartLimiter, isAuthenticated, cartRoutes);
+app.use('/api/orders', orderLimiter, isAuthenticated, orderRoutes);
 
 app.use((req, res, next) => {
   next(createHttpError(404, 'Endpoint not found'));
