@@ -13,13 +13,13 @@ export const products: RequestHandler = async (req, res, next) => {
 };
 
 export const getById: RequestHandler = async (req, res, next) => {
-  const { id } = req.params;
+  const { productId } = req.params;
 
   try {
-    if (!mongoose.isValidObjectId(id)) {
+    if (!mongoose.isValidObjectId(productId)) {
       throw createHttpError(400, 'Invalid product id');
     }
-    const product = await Products.findById(id);
+    const product = await Products.findById(productId);
 
     if (!product) {
       throw createHttpError(404, 'Product not found');

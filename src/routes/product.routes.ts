@@ -5,6 +5,6 @@ const routes = express.Router();
 
 routes.get('', controller.products);
 
-routes.get('/:id', controller.getById);
+routes.get('/:productId', controller.getById);
 
 export default routes;
